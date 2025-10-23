@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_visitor_pass_security,access.visitor.pass.security,model_visitor_pass,group_visitor_security,1,1,1,1
+access_visitor_pass_employee,access.visitor.pass.employee,model_visitor_pass,group_visitor_employee,1,1,1,1
+access_visitor_pass_manager,access.visitor.pass.manager,model_visitor_pass,group_visitor_manager,1,1,1,1

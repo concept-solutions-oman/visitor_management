@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_visitor_kiosk_launch" model="ir.actions.act_url">
+        <field name="name">Kiosk Mode</field>
+        <field name="url">/visitor/kiosk</field>
+        <field name="target">self</field>
+    </record>
+
+    <menuitem id="menu_visitor_management_root"
+              name="Visitors"
+              sequence="50"
+              groups="group_visitor_security,group_visitor_employee,group_visitor_manager"
+              web_icon="visitor_management,static/description/icon.png"/>
+
+    <menuitem id="menu_visitor_pass_records"
+              name="Visitor Passes"
+              action="action_visitor_pass"
+              parent="menu_visitor_management_root"
+              sequence="1"
+              groups="group_visitor_employee,group_visitor_manager,group_visitor_security"/>
+
+    <menuitem id="menu_visitor_kiosk"
+              name="Kiosk Mode"
+              action="action_visitor_kiosk_launch"
+              parent="menu_visitor_management_root"
+              sequence="10"
+              groups="group_visitor_security,group_visitor_employee,group_visitor_manager"/>
+
+    <menuitem id="menu_visitor_configuration"
+              name="Configuration"
+              parent="menu_visitor_management_root"
+              sequence="100"
+              groups="group_visitor_manager"/>
+
+    <menuitem id="menu_visitor_employees"
+              name="Employees"
+              action="hr.open_view_employee_list_my"
+              parent="menu_visitor_configuration"
+              sequence="10"
+              groups="group_visitor_manager"/>
+    
+    <menuitem id="menu_visitor_contacts"
+              name="Visitors (Contacts)"
+              action="base.action_partner_customer_form"
+              parent="menu_visitor_configuration"
+              sequence="20"
+              groups="group_visitor_manager"/>
+</odoo>

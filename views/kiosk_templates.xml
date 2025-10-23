@@ -1,0 +1,901 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="kiosk_standalone_layout" name="Kiosk Standalone Layout">
+        <![CDATA[
+        <!DOCTYPE html>
+        ]]>
+        <html lang="en" class="kiosk_html">
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+                <title>Visitor Kiosk</title>
+                <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+                
+                <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+                
+                <style type="text/css"><![CDATA[
+                    /* Kiosk Modern Styles - Light Theme with Enhanced Effects */
+                    :root {
+                        --primary-color: #00a09d;
+                        --secondary-color: #2c3e50;
+                        --background-color: #f4f7f6;
+                        --text-color: #333;
+                        --white: #ffffff;
+                        --light-gray: #eee;
+                        --border-color: #ced4da;
+                        --font-family: 'Poppins', sans-serif;
+                        --accent-gradient: linear-gradient(135deg, #00a09d 0%, #00d4d1 100%);
+                    }
+
+                    /* ... (All your existing @keyframes: fadeIn, slideInUp, float, pulse, shimmer, glow) ... */
+                    @keyframes fadeIn {
+                        from { opacity: 0; transform: translateY(10px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                    @keyframes slideInUp {
+                        from { opacity: 0; transform: translateY(20px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                    @keyframes float {
+                        0%, 100% { transform: translateY(0px); }
+                        50% { transform: translateY(-10px); }
+                    }
+                    @keyframes pulse {
+                        0%, 100% { transform: scale(1); }
+                        50% { transform: scale(1.05); }
+                    }
+                    @keyframes shimmer {
+                        0% { background-position: -1000px 0; }
+                        100% { background-position: 1000px 0; }
+                    }
+                    
+                    .kiosk_title_shine {
+                        background: linear-gradient(90deg, 
+                            #2c3e50 0%, 
+                            #00a09d 40%, 
+                            #00d4d1 50%, 
+                            #00a09d 60%, 
+                            #2c3e50 100%
+                        );
+                        background-size: 1000px 100%;
+                        -webkit-background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        background-clip: text;
+                        animation: shimmer 3s linear infinite;
+                        font-weight: 700;
+                        letter-spacing: 2px;
+                    }
+                    
+                    /* ... (Your existing @keyframes glow) ... */
+                    @keyframes glow {
+                        0%, 100% { 
+                            text-shadow: 0 0 10px rgba(0, 160, 157, 0.3),
+                                         0 0 20px rgba(0, 160, 157, 0.2),
+                                         0 0 30px rgba(0, 160, 157, 0.1);
+                        }
+                        50% { 
+                            text-shadow: 0 0 20px rgba(0, 160, 157, 0.5),
+                                         0 0 30px rgba(0, 160, 157, 0.3),
+                                         0 0 40px rgba(0, 160, 157, 0.2);
+                        }
+                    }
+
+                    /* ... (All your existing CSS styles: .kiosk_html, .kiosk_body, #particle-canvas, etc...) ... */
+                    .kiosk_html, .kiosk_body {
+                        height: 100%;
+                        margin: 0;
+                        overflow: hidden;
+                    }
+                    .kiosk_body {
+                        font-family: var(--font-family);
+                        color: var(--text-color);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        min-height: 100vh;
+                        position: relative;
+                        background: radial-gradient(circle, #ffffff 0%, #f4f7f6 100%);
+                    }
+                    
+                    #particle-canvas {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        z-index: 0;
+                        opacity: 0.8; 
+                    }
+                    .kiosk_main_container {
+                        width: 100%;
+                        max-width: 650px;
+                        padding: 20px;
+                        box-sizing: border-box;
+                        animation: fadeIn 0.8s ease-out forwards;
+                        z-index: 2;
+                        position: relative;
+                    }
+
+                    .kiosk_content_wrapper {
+                        width: 100%;
+                        margin: 2rem auto;
+                        background: rgba(255, 255, 255, 0.95);
+                        backdrop-filter: blur(10px);
+                        padding: 40px 50px;
+                        border-radius: 20px;
+                        box-shadow: 
+                            0 20px 60px rgba(0, 0, 0, 0.1),
+                            0 0 0 1px rgba(0, 160, 157, 0.1);
+                        border-top: 4px solid var(--primary-color);
+                        box-sizing: border-box;
+                        animation: slideInUp 0.7s ease-out 0.2s forwards;
+                        opacity: 0;
+                        transition: transform 0.3s ease;
+                    }
+                    .kiosk_content_wrapper:hover {
+                        transform: translateY(-5px);
+                        box-shadow: 
+                            0 25px 70px rgba(0, 0, 0, 0.15),
+                            0 0 0 1px rgba(0, 160, 157, 0.2);
+                    }
+
+                    .kiosk_header {
+                        text-align: center;
+                        margin-bottom: 30px;
+                        padding-bottom: 20px;
+                        border-bottom: 2px solid var(--light-gray);
+                        position: relative;
+                    }
+                    .kiosk_header .kiosk_logo {
+                        max-width: 550px;
+                        width: 100%;
+                        height: auto;
+                        display: block;
+                        margin: 0 auto;
+                        transition: transform 0.3s ease;
+                    }
+                    .kiosk_title {
+                        font-size: 36px;
+                        font-weight: 700;
+                        color: var(--secondary-color);
+                        margin-bottom: 10px;
+                        animation: fadeIn 0.6s ease-out forwards;
+                        position: relative;
+                    }
+                    .kiosk_subtitle {
+                        font-size: 18px;
+                        color: #7f8c8d;
+                        margin-top: 0;
+                        animation: fadeIn 0.6s ease-out 0.1s forwards;
+                        font-weight: 300;
+                    }
+                    .kiosk_footer {
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid var(--light-gray);
+                        font-size: 14px;
+                        color: #95a5a6;
+                    }
+
+                    .kiosk_button {
+                        display: inline-block;
+                        padding: 16px 40px;
+                        border-radius: 12px;
+                        font-size: 18px;
+                        font-weight: 600;
+                        text-decoration: none;
+                        cursor: pointer;
+                        border: none;
+                        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                        text-align: center;
+                        margin: 10px;
+                        position: relative;
+                        overflow: hidden;
+                        z-index: 1;
+                        letter-spacing: 0.5px;
+                    }
+                    .kiosk_button::before {
+                        content: '';
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        width: 0;
+                        height: 0;
+                        border-radius: 50%;
+                        background: rgba(255, 255, 255, 0.3);
+                        transform: translate(-50%, -50%);
+                        transition: width 0.6s, height 0.6s;
+                    }
+                    .kiosk_button:hover::before {
+                        width: 300px;
+                        height: 300px;
+                    }
+                    .kiosk_button.primary {
+                        background: var(--accent-gradient);
+                        color: var(--white);
+                        box-shadow: 0 8px 25px rgba(0, 160, 157, 0.3);
+                    }
+                    .kiosk_button.primary:hover {
+                        transform: translateY(-3px) scale(1.02);
+                        box-shadow: 0 12px 35px rgba(0, 160, 157, 0.4);
+                    }
+                    .kiosk_button.primary:active {
+                        transform: translateY(-1px) scale(0.98);
+                    }
+                    .kiosk_button.secondary {
+                        background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+                        color: #495057;
+                        border: 2px solid #dee2e6;
+                    }
+                    .kiosk_button.secondary:hover {
+                        background: linear-gradient(135deg, #dee2e6 0%, #e9ecef 100%);
+                        transform: translateY(-2px);
+                        border-color: var(--primary-color);
+                    }
+                    
+                    .kiosk-button-ripple {
+                        position: absolute;
+                        border-radius: 50%;
+                        background-color: rgba(255, 255, 255, 0.6);
+                        transform: scale(0);
+                        animation: ripple-animation 0.6s ease-out;
+                        pointer-events: none;
+                    }
+                    @keyframes ripple-animation {
+                        to {
+                            transform: scale(4);
+                            opacity: 0;
+                        }
+                    }
+
+                    .visitor_form {
+                        margin-top: 30px;
+                    }
+                    .form_field {
+                        margin-bottom: 25px;
+                        animation: slideInUp 0.5s ease-out backwards;
+                    }
+                    .form_field:nth-child(1) { animation-delay: 0.1s; }
+                    .form_field:nth-child(2) { animation-delay: 0.2s; }
+                    .form_field:nth-child(3) { animation-delay: 0.3s; }
+                    .form_field:nth-child(4) { animation-delay: 0.4s; }
+                    .form_field label {
+                        display: block;
+                        font-weight: 600;
+                        margin-bottom: 10px;
+                        color: #495057;
+                        font-size: 15px;
+                        letter-spacing: 0.3px;
+                        transition: color 0.3s ease;
+                    }
+                    .form_field:focus-within label {
+                        color: var(--primary-color);
+                    }
+                    .form_field input,
+                    .form_field select,
+                    .form_field textarea {
+                        width: 100%;
+                        padding: 16px;
+                        font-size: 16px;
+                        border: 2px solid var(--border-color);
+                        border-radius: 10px;
+                        box-sizing: border-box;
+                        background-color: #f8f9fa;
+                        color: var(--text-color);
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        font-family: var(--font-family);
+                    }
+                    .form_field textarea {
+                        min-height: 100px;
+                        resize: vertical;
+                    }
+                    .form_field input:focus,
+                    .form_field select:focus,
+                    .form_field textarea:focus {
+                        outline: none;
+                        border-color: var(--primary-color);
+                        background-color: var(--white);
+                        box-shadow: 
+                            0 0 0 4px rgba(0, 160, 157, 0.1),
+                            0 5px 20px rgba(0, 160, 157, 0.15);
+                        transform: translateY(-2px);
+                    }
+                    @keyframes inputGlow {
+                        0%, 100% { box-shadow: 0 0 5px rgba(0, 160, 157, 0.2); }
+                        50% { box-shadow: 0 0 20px rgba(0, 160, 157, 0.4); }
+                    }
+                    .form_field input:focus,
+                    .form_field select:focus,
+                    .form_field textarea:focus {
+                        animation: inputGlow 2s ease-in-out infinite;
+                    }
+                    .form_actions {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-top: 40px;
+                        animation: fadeIn 0.6s ease-out 0.5s backwards;
+                    }
+                    
+                    .reason_options {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 15px;
+                        margin-top: 20px;
+                    }
+                    .reason_option {
+                        display: flex;
+                        align-items: center;
+                        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+                        border: 2px solid var(--border-color);
+                        border-radius: 12px;
+                        padding: 18px 20px;
+                        cursor: pointer;
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    .reason_option::before {
+                        content: '';
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 4px;
+                        height: 100%;
+                        background: var(--accent-gradient);
+                        transform: scaleY(0);
+                        transition: transform 0.3s ease;
+                    }
+                    .reason_option:hover::before {
+                        transform: scaleY(1);
+                    }
+                    .reason_option:hover {
+                        border-color: var(--primary-color);
+                        background: linear-gradient(135deg, #ffffff 0%, #e0f2f1 100%);
+                        box-shadow: 0 5px 20px rgba(0, 160, 157, 0.15);
+                        transform: translateX(8px) scale(1.02);
+                    }
+                    .reason_option input[type="radio"]:checked + label {
+                        color: var(--primary-color);
+                        font-weight: 600;
+                    }
+                    .reason_option:has(input[type="radio"]:checked) {
+                        border-color: var(--primary-color);
+                        background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+                        box-shadow: 0 8px 25px rgba(0, 160, 157, 0.25);
+                    }
+                    .reason_option:has(input[type="radio"]:checked)::before {
+                        transform: scaleY(1);
+                    }
+                    .reason_option input[type="radio"] {
+                        margin-right: 15px;
+                        width: 22px;
+                        height: 22px;
+                        accent-color: var(--primary-color);
+                        cursor: pointer;
+                    }
+                    .reason_option label {
+                        flex-grow: 1;
+                        font-size: 16px;
+                        color: var(--text-color);
+                        margin-bottom: 0;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                    }
+
+                    .confirmation_text {
+                        font-size: 18px;
+                        color: #555;
+                        margin-top: 25px;
+                        line-height: 1.8;
+                        animation: fadeIn 0.6s ease-out 0.3s backwards;
+                    }
+                    .redirect_notice {
+                        margin-top: 30px;
+                        font-style: italic;
+                        color: #999;
+                        animation: pulse 2s ease-in-out infinite;
+                    }
+                    .success-checkmark {
+                        width: 80px;
+                        height: 80px;
+                        margin: 0 auto 20px;
+                        border-radius: 50%;
+                        display: block;
+                        stroke-width: 3;
+                        stroke: #00a09d; 
+                        stroke-miterlimit: 10;
+                        box-shadow: inset 0 0 0 #00a09d;
+                        animation: fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both;
+                    }
+                    .checkmark-circle {
+                        stroke-dasharray: 166;
+                        stroke-dashoffset: 166;
+                        stroke-width: 3;
+                        stroke-miterlimit: 10;
+                        stroke: #00a09d;
+                        fill: none;
+                        animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+                    }
+                    .checkmark-check {
+                        transform-origin: 50% 50%;
+                        stroke-dasharray: 48;
+                        stroke-dashoffset: 48;
+                        stroke: #FFFFFF;
+                        animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+                    }
+                    @keyframes stroke {
+                        100% { stroke-dashoffset: 0; }
+                    }
+                    @keyframes scale {
+                        0%, 100% { transform: none; }
+                        50% { transform: scale3d(1.1, 1.1, 1); }
+                    }
+                    @keyframes fill {
+                        100% { box-shadow: inset 0 0 0 40px #00a09d; }
+                    }
+                    
+                    .text-center {
+                        text-align: center;
+                    }
+                    .mb-4 {
+                        margin-bottom: 1.5rem;
+                    }
+                    @media (max-width: 768px) {
+                        /* ... */
+                    }
+                    @media (max-width: 480px) {
+                        /* ... */
+                    }
+                    
+                    
+                    /* *** STYLES ADDED FOR HYBRID KIOSK ***
+                    */
+                    
+                    #qr-reader-container {
+                        width: 100%;
+                        max-width: 400px; /* Or size as you prefer */
+                        margin: 20px auto;
+                        border-radius: 12px;
+                        overflow: hidden;
+                        border: 4px solid var(--border-color);
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                        transition: all 0.3s ease;
+                    }
+                    #qr-reader-container:hover {
+                         border-color: var(--primary-color);
+                         box-shadow: 0 10px 40px rgba(0, 160, 157, 0.2);
+                    }
+                    #qr-reader {
+                        width: 100%;
+                    }
+                    
+                    .kiosk_divider {
+                        display: flex;
+                        align-items: center;
+                        text-align: center;
+                        margin: 25px 0;
+                        color: #95a5a6;
+                        font-weight: 500;
+                    }
+                    .kiosk_divider::before,
+                    .kiosk_divider::after {
+                        content: '';
+                        flex: 1;
+                        border-bottom: 2px solid var(--light-gray);
+                    }
+                    .kiosk_divider:not(:empty)::before {
+                        margin-right: 1em;
+                    }
+                    .kiosk_divider:not(:empty)::after {
+                        margin-left: 1em;
+                    }
+                    
+                ]]>
+                </style>
+            </head>
+            <body class="kiosk_body">
+                <canvas id="particle-canvas"></canvas>
+                
+                <div class="kiosk_main_container">
+                    <div class="kiosk_content_wrapper">
+                        <div class="kiosk_header">
+                            <img t-att-src="'/web/image?model=res.company&amp;id=' + str(company.id) + '&amp;field=logo'" alt="Company Logo" class="kiosk_logo"/>
+                        </div>
+                        
+                        <div class="kiosk_body_content">
+                            <t t-out="0"/>
+                        </div>
+                        
+                        <div class="kiosk_footer">
+                            <p>For assistance, please see the front desk.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <script type="text/javascript"><![CDATA[
+                    document.addEventListener('DOMContentLoaded', function() {
+                        
+                        // ===== PROFESSIONAL PARTICLE NETWORK BACKGROUND =====
+                        const canvas = document.getElementById('particle-canvas');
+                        if (canvas) {
+                            // ... (Your full, existing particle code)
+                            const ctx = canvas.getContext('2d');
+                            let width = window.innerWidth;
+                            let height = window.innerHeight;
+                            canvas.width = width;
+                            canvas.height = height;
+                            let particlesArray;
+                            let mouse = {
+                                x: null,
+                                y: null,
+                                radius: (height / 120) * (width / 120) 
+                            };
+                            window.addEventListener('mousemove', function(e) {
+                                mouse.x = e.clientX;
+                                mouse.y = e.clientY;
+                            });
+                            window.addEventListener('mouseout', function() {
+                                mouse.x = null;
+                                mouse.y = null;
+                            });
+                            class Particle {
+                                constructor(x, y, directionX, directionY, size, color) {
+                                    this.x = x;
+                                    this.y = y;
+                                    this.directionX = directionX;
+                                    this.directionY = directionY;
+                                    this.size = size;
+                                    this.color = color;
+                                }
+                                draw() {
+                                    ctx.beginPath();
+                                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                                    ctx.fillStyle = 'rgba(0, 160, 157, 0.5)';
+                                    ctx.fill();
+                                }
+                                update() {
+                                    if (this.x > width || this.x < 0) {
+                                        this.directionX = -this.directionX;
+                                    }
+                                    if (this.y > height || this.y < 0) {
+                                        this.directionY = -this.directionY;
+                                    }
+                                    let dx = mouse.x - this.x;
+                                    let dy = mouse.y - this.y;
+                                    let distance = Math.sqrt(dx * dx + dy * dy);
+                                    if (distance < mouse.radius + this.size) {
+                                        if (mouse.x < this.x && this.x < width - this.size * 10) {
+                                            this.x += 2;
+                                        }
+                                        if (mouse.x > this.x && this.x > this.size * 10) {
+                                            this.x -= 2;
+                                        }
+                                        if (mouse.y < this.y && this.y < height - this.size * 10) {
+                                            this.y += 2;
+                                        }
+                                        if (mouse.y > this.y && this.y > this.size * 10) {
+                                            this.y -= 2;
+                                        }
+                                    }
+                                    this.x += this.directionX;
+                                    this.y += this.directionY;
+                                    this.draw();
+                                }
+                            }
+                            function init() {
+                                particlesArray = [];
+                                let numberOfParticles = (height * width) / 9000;
+                                for (let i = 0; i < numberOfParticles; i++) {
+                                    let size = (Math.random() * 1.5) + 1;
+                                    let x = (Math.random() * ((width - size * 2) - (size * 2)) + size * 2);
+                                    let y = (Math.random() * ((height - size * 2) - (size * 2)) + size * 2);
+                                    let directionX = (Math.random() * 0.4) - 0.2;
+                                    let directionY = (Math.random() * 0.4) - 0.2;
+                                    let color = 'rgba(0, 160, 157, 0.5)';
+                                    particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
+                                }
+                            }
+                            function animate() {
+                                requestAnimationFrame(animate);
+                                ctx.clearRect(0, 0, width, height);
+                                for (let i = 0; i < particlesArray.length; i++) {
+                                    particlesArray[i].update();
+                                }
+                                connect();
+                            }
+                            function connect() {
+                                let opacityValue = 1;
+                                let maxDistance = (width / 10) * (height / 10);
+                                for (let a = 0; a < particlesArray.length; a++) {
+                                    for (let b = a + 1; b < particlesArray.length; b++) {
+                                        let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x)) +
+                                            ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
+                                        if (distance < maxDistance) {
+                                            opacityValue = 1 - (distance / maxDistance); 
+                                            ctx.strokeStyle = 'rgba(0, 160, 157, ' + opacityValue * 0.35 + ')';
+                                            ctx.lineWidth = 1;
+                                            ctx.beginPath();
+                                            ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                                            ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                                            ctx.stroke();
+                                        }
+                                    }
+                                }
+                            }
+                            window.addEventListener('resize', function() {
+                                width = window.innerWidth;
+                                height = window.innerHeight;
+                                canvas.width = width;
+                                canvas.height = height;
+                                mouse.radius = (height / 120) * (width / 120);
+                                init();
+                            });
+                            init();
+                            animate();
+                        } // end if(canvas)
+                        
+                        
+                        // ===== BUTTON RIPPLE EFFECT (Kept) =====
+                        const buttons = document.querySelectorAll('.kiosk_button');
+                        buttons.forEach(button => {
+                            button.addEventListener('click', function(e) {
+                                // ... (Your full, existing ripple code)
+                                const rect = button.getBoundingClientRect();
+                                const ripple = document.createElement('span');
+                                const diameter = Math.max(button.clientWidth, button.clientHeight);
+                                const radius = diameter / 2;
+                                ripple.style.width = ripple.style.height = diameter + 'px';
+                                ripple.style.left = (e.clientX - rect.left - radius) + 'px';
+                                ripple.style.top = (e.clientY - rect.top - radius) + 'px';
+                                ripple.classList.add('kiosk-button-ripple');
+                                const oldRipple = button.querySelector('.kiosk-button-ripple');
+                                if (oldRipple) oldRipple.remove();
+                                button.appendChild(ripple);
+                            });
+                        });
+                        
+                        // ===== FORM INPUT ANIMATIONS (Kept) =====
+                        const inputs = document.querySelectorAll('.form_field input, .form_field select, .form_field textarea');
+                        inputs.forEach(input => {
+                            input.addEventListener('focus', function() {
+                                this.parentElement.style.transform = 'scale(1.02)';
+                            });
+                            
+                            input.addEventListener('blur', function() {
+                                this.parentElement.style.transform = 'scale(1)';
+                            });
+                        });
+                        
+                        // ===== KIOSK SECURITY (Kept) =====
+                        if (window.location.pathname.includes('/visitor/')) {
+                            // ... (Your full, existing security code)
+                            document.addEventListener('contextmenu', function(e) {
+                                e.preventDefault();
+                            });
+                            document.addEventListener('keydown', function(e) {
+                                if (e.key === 'F11' || e.key === 'F12' || 
+                                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+                                    (e.ctrlKey && e.key === 'u')) {
+                                    e.preventDefault();
+                                }
+                            });
+                        }
+                        
+                        // ===== AUTO-REFRESH ON INACTIVITY (Kept) =====
+                        let inactivityTimer;
+                        const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+                        
+                        function resetInactivityTimer() {
+                            clearTimeout(inactivityTimer);
+                            if (window.location.pathname === '/visitor/kiosk') {
+                                inactivityTimer = setTimeout(function() {
+                                    window.location.reload();
+                                }, INACTIVITY_TIMEOUT);
+                            }
+                        }
+                        
+                        ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(function(event) {
+                            document.addEventListener(event, resetInactivityTimer, true);
+                        });
+                        
+                        resetInactivityTimer();
+                    });
+                ]]>
+                </script>
+            </body>
+        </html>
+    </template>
+
+
+    <template id="kiosk_hybrid_welcome_screen" name="Kiosk Hybrid Welcome Screen">
+        <t t-call="visitor_management.kiosk_standalone_layout">
+            <div class="text-center">
+                <h1 class="kiosk_title kiosk_title_shine">Welcome</h1>
+                <p class="kiosk_subtitle">Please scan your Visitor Pass QR Code</p>
+                
+                <div id="qr-reader-container">
+                    <div id="qr-reader"></div>
+                </div>
+
+                <div class="kiosk_divider">OR</div>
+                
+                <p class="kiosk_subtitle" style="margin-top: 0;">If you are a new visitor without a pass:</p>
+                
+                <div class="form_actions" style="justify-content: center;">
+                    <a href="/visitor/walkin" class="kiosk_button secondary" style="width: 80%;">
+                        New Visitor Registration
+                    </a>
+                </div>
+            </div>
+            
+            <script type="text/javascript"><![CDATA[
+                document.addEventListener('DOMContentLoaded', function() {
+                    // --- QR CODE SCANNER SCRIPT (MODIFIED) ---
+                    
+                    function onScanSuccess(decodedText, decodedResult) {
+                        // Handle the scanned code (which is a URL)
+                        console.log(`Scan result: ${decodedText}`);
+                        
+                        // Stop scanning
+                        html5Qrcode.stop().then(ignore => {
+                            // Redirect to the URL
+                            window.location.href = decodedText;
+                        }).catch(err => {
+                            console.error("Failed to stop scanner", err);
+                            window.location.href = decodedText; // Redirect anyway
+                        });
+                    }
+
+                    function onScanFailure(error) {
+                        // This will fire continuously, which is normal.
+                        // console.warn(`Scan failure: ${error}`);
+                    }
+                    
+                    try {
+                        var html5Qrcode = new Html5Qrcode("qr-reader");
+
+                        // --- NEW DYNAMIC CONFIG ---
+                        // This config is more robust for different screen/camera sizes.
+                        // It creates a scanning box that is 70% of the smaller dimension (width or height).
+                        const qrboxFunction = (viewfinderWidth, viewfinderHeight) => {
+                            let minEdgePercentage = 0.7; // 70%
+                            let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+                            let qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+                            return {
+                                width: qrboxSize,
+                                height: qrboxSize
+                            };
+                        }
+
+                        const config = { 
+                            fps: 15, // Increased from 10 for slightly faster scanning
+                            qrbox: qrboxFunction, // Use the dynamic function
+                            /* Experimental setting for focus, uncomment if still having issues
+                               videoConstraints: {
+                                   focusMode: "continuous"
+                               }
+                            */
+                        };
+                        // --- END NEW CONFIG ---
+                        
+                        // Try to start the environment-facing camera (back camera)
+                        html5Qrcode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+                            .catch(err => {
+                                // If back camera fails, try the user-facing camera (front camera)
+                                console.warn("Environment camera failed, trying user camera.", err);
+                                html5Qrcode.start({ facingMode: "user" }, config, onScanSuccess, onScanFailure)
+                                    .catch(err2 => {
+                                        console.error("Failed to start any camera.", err2);
+                                        document.getElementById('qr-reader').innerHTML = 
+                                            '<p style="color: red; padding: 20px;">Could not start camera. Please ensure permissions are granted.</p>';
+                                    });
+                            });
+                    } catch (ex) {
+                        console.error("Error initializing QR Scanner", ex);
+                    }
+                });
+            ]]>
+            </script>
+        </t>
+    </template>
+    
+
+    <template id="kiosk_walkin_form_screen" name="Kiosk Walk-In Form">
+        <t t-call="visitor_management.kiosk_standalone_layout">
+            <div class="text-center">
+                <h1 class="kiosk_title" style="font-size: 32px;">New Visitor Registration</h1>
+                <p class="kiosk_subtitle">Please enter your details to check in.</p>
+                
+                <t t="error_message">
+                    <p class="confirmation_text" style="color: #d9534f; font-size: 16px; margin-top: 0;">
+                        <t t-esc="error_message"/>
+                    </p>
+                </t>
+            </div>
+            
+            <form id="walkin_form" action="/visitor/walkin/submit" method="POST" class="visitor_form">
+                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                
+                <div class="form_field">
+                    <label for="visitor_name">Your Full Name</label>
+                    <input type="text" id="visitor_name" name="visitor_name" required="1" placeholder="e.g., Jane Doe"/>
+                </div>
+                
+                <div class="form_field">
+                    <label for="visitor_phone">Your Phone Number</label>
+                    <input type="tel" id="visitor_phone" name="visitor_phone" required="1" placeholder="e.g., 555-123-4567"/>
+                </div>
+                
+                <div class="form_field">
+                    <label for="visitor_company">Your Company (Optional)</label>
+                    <input type="text" id="visitor_company" name="visitor_company" placeholder="e.g., Acme Corp"/>
+                </div>
+                
+                <div class="form_field">
+                    <label for="employee_id">Who are you visiting?</label>
+                    <select id="employee_id" name="employee_id" required="1">
+                        <option value="">Select an employee...</option>
+                        <t t-foreach="employees" t-as="employee">
+                            <option t-att-value="employee.id"><t t-esc="employee.name"/></option>
+                        </t>
+                    </select>
+                </div>
+                
+                <div class="form_actions">
+                    <a href="/visitor/kiosk" class="kiosk_button secondary">Back to Scanner</a>
+                    <button type="submit" class="kiosk_button primary">Submit &amp; Check In</button>
+                </div>
+            </form>
+        </t>
+    </template>
+
+    
+    <template id="kiosk_scan_result" name="Kiosk Scan Result">
+         <t t-call="visitor_management.kiosk_standalone_layout">
+            <div class="text-center">
+                
+                <t t-if="success == True">
+                    <svg class="success-checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                        <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                        <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                    </svg>
+                </t>
+                <t t-if="success == False">
+                    <svg class="success-checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" style="stroke: #d9534f; box-shadow: inset 0 0 0 40px #d9534f;">
+                        <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none" style="stroke: #d9534f;"/>
+                        <path classs="checkmark-check" fill="none" d="M16 16 36 36 M36 16 16 36" style="stroke-width: 4;"/>
+                    </svg>
+                </t>
+
+                <h1 class="kiosk_title"><t t-esc="message_title"/></h1>
+                <p class="confirmation_text" style="font-size: 20px;">
+                    <t t-esc="message_body"/>
+                </p>
+                <p class="redirect_notice">
+                    You will be redirected to the welcome screen shortly...
+                </p>
+            </div>
+            <script type="text/javascript"><![CDATA[
+                setTimeout(function(){
+                    window.location.href = '/visitor/kiosk';
+                }, 8000); // 8 seconds delay
+            ]]>
+            </script>
+        </t>
+    </template>
+    
+    <template id="kiosk_checkin_form" name="Kiosk Check-In Form (DEPRECATED)">
+    </template>
+    <template id="kiosk_employee_select_form" name="Kiosk Employee Selection (DEPRECATED)">
+    </template>
+    <template id="kiosk_reason_for_visit" name="Kiosk Reason for Visit (DEPRECATED)">
+    </template>
+    <template id="kiosk_confirmation_page" name="Kiosk Confirmation (DEPRECATED)">
+    </template>
+
+    <template id="kiosk_scan_screen" name="Kiosk Scan Screen (DEPRECATED)">
+    </template>
+
+</odoo>
