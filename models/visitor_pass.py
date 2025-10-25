@@ -223,8 +223,8 @@ class VisitorPass(models.Model):
             self.message_post(
                 body=message_body,
                 subject=f'Visitor Arrival: {self.visitor_name}',
-                message_type='notification',
-                subtype_xmlid='mail.mt_note',
+                message_type='comment',
+                subtype_xmlid='mail.mt_comment',
                 partner_ids=[self.host_employee_id.user_id.partner_id.id]
             )
             
@@ -261,8 +261,8 @@ class VisitorPass(models.Model):
             self.message_post(
                 body=message_body,
                 subject=f'Visitor Pass Confirmed: {self.visitor_name}',
-                message_type='notification',
-                subtype_xmlid='mail.mt_note',
+                message_type='comment',
+                subtype_xmlid='mail.mt_comment',
                 partner_ids=[self.host_employee_id.user_id.partner_id.id],
                 attachment_ids=[attachment.id] 
             )

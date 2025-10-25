@@ -30,12 +30,12 @@
                         and again when departing to record your check-out time. 
                     </p>
                     <p> 
-                        For any assistance or rescheduling, you may contact your host or receptionists .
+                        For any assistance or rescheduling, you may contact your host / receptionists .
                     </p>
 
-                   <div style="text-align: center; margin: 25px 0;">
+                  <div style="text-align: center; margin: 25px 0;">
                         <img t-if="object.qr_code" 
-                             t-att-src="'data:image/png;base64,' + object.qr_code.decode('utf-8')" 
+                             t-att-src="'data:image/png;base64,' + object.qr_code.decode('ascii')" 
                              alt="Your Visitor Pass QR Code" 
                              style="width: 200px; height: 200px;"/>
                     </div>
