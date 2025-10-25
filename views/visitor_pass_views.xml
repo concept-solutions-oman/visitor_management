@@ -4,7 +4,7 @@
         <field name="name">visitor.pass.tree</field>
         <field name="model">visitor.pass</field>
         <field name="arch" type="xml">
-            <tree string="Visitor Passes" decoration-success="state=='checked_out'" decoration-info="state=='checked_in' or state=='in_meeting'" decoration-muted="state=='cancelled'">
+            <tree string="Visitor Passes" decoration-success="state=='checked_out'" decoration-info="state=='checked_in'" decoration-muted="state=='cancelled'">
                 <field name="planned_check_in"/>
                 <field name="visitor_name"/>
                 <field name="visitor_phone"/>
@@ -12,7 +12,7 @@
                 <field name="reason_for_visit" optional="show"/>
                 <field name="state" widget="badge" 
                        decoration-success="state=='checked_out'" 
-                       decoration-info="state in ('checked_in', 'in_meeting', 'meeting_ended')"
+                       decoration-info="state == 'checked_in'"
                        decoration-warning="state=='confirmed'"
                        decoration-muted="state=='draft' or state=='cancelled'"/>
                 <field name="check_in_time" optional="hide"/>
@@ -33,19 +33,7 @@
                             class="btn-primary"
                             invisible="state != 'draft'"
                             groups="visitor_management.group_visitor_employee"/>
-                    <button name="action_start_meeting" 
-                            string="Start Meeting" 
-                            type="object" 
-                            class="btn-primary"
-                            invisible="state != 'checked_in'"
-                            groups="visitor_management.group_visitor_employee"/>
-                    <button name="action_end_meeting" 
-                            string="End Meeting" 
-                            type="object" 
-                            class="btn-primary"
-                            invisible="state != 'in_meeting'"
-                            groups="visitor_management.group_visitor_employee"/>
-
+                    
                     <button name="action_check_in" 
                             string="Check-In" 
                             type="object" 
@@ -56,7 +44,7 @@
                             string="Check-Out" 
                             type="object" 
                             class="btn-primary"
-                            invisible="state in ('draft', 'confirmed', 'checked_out', 'cancelled')"
+                            invisible="state not in ('checked_in')"
                             groups="visitor_management.group_visitor_security"/>
                     
                     <button name="action_cancel" 
@@ -70,7 +58,7 @@
                             invisible="state not in ('cancelled')"
                             groups="visitor_management.group_visitor_employee"/>
 
-                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,checked_in,in_meeting,checked_out"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,checked_in,checked_out"/>
                 </header>
                 <sheet>
                     <group>
@@ -83,7 +71,7 @@
                             <field name="visitor_id" 
                                    placeholder="Select existing visitor..."
                                    context="{'search_default_customer': 0, 'show_address': 1}"
-                                   options="{'no_quick_create': True}"/>
+                                   options="{'no_quick_create': True, 'no_create_edit': True}"/>
                             <field name="visitor_name" required="1" placeholder="...or enter new visitor name"/>
                             <field name="visitor_phone" required="1"/>
                             <field name="visitor_email"/>
@@ -92,9 +80,7 @@
                         <group id="visit_times" string="Visit Timestamps" invisible="state == 'draft'">
                             <field name="check_in_time" readonly="1"/>
                             <field name="check_out_time" readonly="1"/>
-                            <field name="meeting_start_time" readonly="1"/>
-                            <field name="meeting_end_time" readonly="1"/>
-                        </group>
+                            </group>
                         <group id="qr_code" string="Access QR Code" invisible="state == 'draft'">
                             <field name="qr_code" widget="image" nolabel="1"/>
                             <field name="access_token" readonly="1"/>
@@ -132,7 +118,7 @@
                 <separator/>
                 <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
                 <filter string="Confirmed" name="confirmed" domain="[('state', '=', 'confirmed')]"/>
-                <filter string="Checked In" name="checked_in" domain="[('state', 'in', ('checked_in', 'in_meeting', 'meeting_ended'))]"/>
+                <filter string="Checked In" name="checked_in" domain="[('state', '=', 'checked_in')]"/>
                 <filter string="Checked Out" name="checked_out" domain="[('state', '=', 'checked_out')]"/>
                 <group expand="0" string="Group By">
                     <filter string="Host Employee" name="group_host" context="{'group_by': 'host_employee_id'}"/>

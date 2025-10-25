@@ -1,38 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data noupdate="1">
+    <data noupdate="0">
         <record id="mail_template_visitor_pass_confirmation" model="mail.template">
             <field name="name">Visitor Pass: Confirmation and QR Code</field>
             <field name="model_id" ref="visitor_management.model_visitor_pass"/>
-            <field name="subject">Your Visit Confirmation for ${object.company_id.name}</field>
-            <field name="email_to">${object.visitor_email}</field>
-            <field name="lang">${object.visitor_id.lang}</field>
+            <field name="subject">Your Visit Confirmation for {{ object.env.company.name }}</field>
+            <field name="email_to">{{ object.visitor_email }}</field>
+            <field name="lang">{{ object.visitor_id.lang or 'en_US' }}</field>
             <field name="body_html" type="html">
                 <div style="font-family: 'Arial', sans-serif; font-size: 14px; color: #333;">
-                    <p>Dear ${object.visitor_name},</p>
+                    <p>Dear <t t-out="object.visitor_name"/>,</p>
                     
-                    <p>Your visit to <strong>${object.company_id.name}</strong> to meet with <strong>${object.host_employee_id.name}</strong> has been confirmed.</p>
+                    <p>We are pleased to confirm your upcoming visit to <strong><t t-out="object.env.company.name"/></strong> .</p>
                     
-                    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                        <strong>Visit Details:</strong>
-                        <ul>
-                            <li><strong>Host:</strong> ${object.host_employee_id.name}</li>
-                            <li><strong>Date &amp; Time:</strong> ${format_datetime(object.planned_check_in, tz=object.host_employee_id.tz or 'UTC')}</li>
-                            <li><strong>Reason:</strong> ${object.reason_for_visit or 'N/A'}</li>
+                    <div style="background-color: #f4f6f8; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                         <strong style="font-size: 15px;">Visit Details</strong>
+                        <ul style="margin-top: 10px; padding-left: 20px;">
+                            <li><strong>Host:</strong> <t t-out="object.host_employee_id.name"/></li>
+                            <li>
+                                <strong>Date &amp; Time:</strong>
+                                <span t-esc="object.planned_check_in" t-options="{'widget': 'datetime', 'tz': object.host_employee_id.tz or 'UTC'}"/>
+                            </li>
+                            <li><strong>Reason:</strong> <t t-out="object.reason_for_visit or 'N/A'"/></li>
                         </ul>
                     </div>
 
-                    <p>Please present the QR code below at the reception to check in upon your arrival.</p>
-                    
-                    <div style="text-align: center; margin: 25px 0;">
-                        <img src="/web/image?model=visitor.pass&amp;id=${object.id}&amp;field=qr_code" alt="Your Visitor Pass QR Code" style="width: 200px; height: 200px;"/>
+                    <p>Your unique <strong>QR code</strong> is attached to this email. 
+                        Please present it at the <strong>reception kiosk</strong> upon arrival to check in, 
+                        and again when departing to record your check-out time. 
+                    </p>
+                    <p> 
+                        For any assistance or rescheduling, you may contact your host or receptionists .
+                    </p>
+
+                   <div style="text-align: center; margin: 25px 0;">
+                        <img t-if="object.qr_code" 
+                             t-att-src="'data:image/png;base64,' + object.qr_code.decode('utf-8')" 
+                             alt="Your Visitor Pass QR Code" 
+                             style="width: 200px; height: 200px;"/>
                     </div>
                     
-                    <p>We look forward to seeing you.</p>
+                    <p>We look forward to welcoming you to <strong><t t-out="object.env.company.name"/></strong> 
+                        and wish you a pleasant visit.
+                    </p>
                     
                     <p>
                         Best regards,<br/>
-                        ${object.company_id.name}
+                        <t t-out="object.env.company.name"/>
                     </p>
                 </div>
             </field>

@@ -4,6 +4,9 @@ import base64
 from io import BytesIO
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+import logging
+
+_logger = logging.getLogger(__name__)
 
 class VisitorPass(models.Model):
     _name = 'visitor.pass'
@@ -30,8 +33,6 @@ class VisitorPass(models.Model):
     )
     
     # Visitor Details
-    # An employee can either select an existing contact (partner)
-    # or fill in the details manually to create a new one.
     visitor_id = fields.Many2one('res.partner', string='Existing Visitor')
     visitor_name = fields.Char(string='Visitor Name', required=True, tracking=True)
     visitor_phone = fields.Char(string='Visitor Phone', required=True, tracking=True)
@@ -49,15 +50,11 @@ class VisitorPass(models.Model):
     )
     check_in_time = fields.Datetime(string='Actual Check-In Time', tracking=True, readonly=True)
     check_out_time = fields.Datetime(string='Actual Check-Out Time', tracking=True, readonly=True)
-    meeting_start_time = fields.Datetime(string='Meeting Start Time', tracking=True, readonly=True)
-    meeting_end_time = fields.Datetime(string='Meeting End Time', tracking=True, readonly=True)
-
+    
     state = fields.Selection([
         ('draft', 'Draft'),
         ('confirmed', 'Confirmed (Awaiting Visitor)'),
         ('checked_in', 'Checked In'),
-        ('in_meeting', 'In Meeting'),
-        ('meeting_ended', 'Meeting Ended'),
         ('checked_out', 'Checked Out'),
         ('cancelled', 'Cancelled'),
     ], string='Status', default='draft', required=True, tracking=True)
@@ -74,11 +71,18 @@ class VisitorPass(models.Model):
     )
     qr_code = fields.Binary(string="QR Code", compute="_compute_qr_code", store=True)
 
-    @api.depends('visitor_id', 'visitor_name')
+    @api.depends('visitor_id', 'visitor_name', 'host_employee_id')
     def _compute_name(self):
         for rec in self:
-            visitor_name = rec.visitor_name or rec.visitor_id.name
-            rec.name = f"{visitor_name} visiting {rec.host_employee_id.name}"
+            visitor_name = rec.visitor_name or (rec.visitor_id and rec.visitor_id.name)
+            host_name = rec.host_employee_id and rec.host_employee_id.name
+            if visitor_name and host_name:
+                rec.name = f"{visitor_name} visiting {host_name}"
+            elif visitor_name:
+                rec.name = visitor_name
+            else:
+                rec.name = "New Visit"
+
 
     @api.onchange('visitor_id')
     def _onchange_visitor_id(self):
@@ -96,29 +100,37 @@ class VisitorPass(models.Model):
         """
         On creation, if no visitor_id is provided, create a new res.partner
         (contact) for the visitor.
+        This now also handles email and company from the walk-in form.
         """
         for vals in vals_list:
-            if not vals.get('visitor_id') and vals.get('visitor_name'):
-                partner_vals = {
-                    'name': vals.get('visitor_name'),
-                    'phone': vals.get('visitor_phone'),
-                    'email': vals.get('visitor_email'),
-                }
-                if vals.get('visitor_company'):
-                    # Check if company exists, otherwise create it
-                    company = self.env['res.partner'].search([
-                        ('name', '=', vals.get('visitor_company')),
-                        ('is_company', '=', True)
-                    ], limit=1)
-                    if not company:
-                        company = self.env['res.partner'].create({
-                            'name': vals.get('visitor_company'),
-                            'is_company': True
-                        })
-                    partner_vals['parent_id'] = company.id
+            if not vals.get('visitor_id') and vals.get('visitor_name') and vals.get('visitor_phone'):
                 
-                new_visitor = self.env['res.partner'].create(partner_vals)
-                vals['visitor_id'] = new_visitor.id
+                visitor = self.env['res.partner'].search([
+                    ('name', 'ilike', vals.get('visitor_name')),
+                    ('phone', '=', vals.get('visitor_phone'))
+                ], limit=1)
+                
+                if not visitor:
+                    partner_vals = {
+                        'name': vals.get('visitor_name'),
+                        'phone': vals.get('visitor_phone'),
+                        'email': vals.get('visitor_email'),
+                    }
+                    if vals.get('visitor_company'):
+                        company = self.env['res.partner'].search([
+                            ('name', '=', vals.get('visitor_company')),
+                            ('is_company', '=', True)
+                        ], limit=1)
+                        if not company:
+                            company = self.env['res.partner'].create({
+                                'name': vals.get('visitor_company'),
+                                'is_company': True
+                            })
+                        partner_vals['parent_id'] = company.id
+                    
+                    visitor = self.env['res.partner'].create(partner_vals)
+                
+                vals['visitor_id'] = visitor.id
         
         return super().create(vals_list)
 
@@ -143,19 +155,19 @@ class VisitorPass(models.Model):
     @api.depends('access_token')
     def _compute_qr_code(self):
         """
-        Generate a QR code containing the URL for check-in/out.
+        Generate a QR code containing ONLY the access token.
+        The kiosk scanner will construct the full URL.
         """
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         for rec in self:
             if rec.access_token:
-                qr_url = f"{base_url}/visitor/scan/{rec.access_token}"
+                # --- FIX: Only encode the token, not the full URL ---
                 qr = qrcode.QRCode(
                     version=1,
                     error_correction=qrcode.constants.ERROR_CORRECT_L,
                     box_size=10,
                     border=4,
                 )
-                qr.add_data(qr_url)
+                qr.add_data(rec.access_token)
                 qr.make(fit=True)
                 img = qr.make_image(fill_color="black", back_color="white")
                 temp = BytesIO()
@@ -167,17 +179,29 @@ class VisitorPass(models.Model):
     def _send_qr_email(self):
         """
         Sends the confirmation and QR code email to the visitor.
+        
+        This method now uses the standard Odoo 17 send_mail,
+        which correctly handles the QWeb template.
         """
         self.ensure_one()
-        if not self.visitor_email:
-            raise UserError(_("Cannot send email: Visitor does not have an email address."))
-            
+        
         template = self.env.ref('visitor_management.mail_template_visitor_pass_confirmation', raise_if_not_found=False)
         if not template:
-            _logger.error("Mail template 'mail_template_visitor_pass_confirmation' not found.")
-            return
+            _logger.error("Mail template 'visitor_management.mail_template_visitor_pass_confirmation' not found.")
+            raise UserError(_("The mail template for the visitor pass is missing. Please contact your administrator."))
 
-        template.send_mail(self.id, force_send=True)
+        try:
+            # Use the standard Odoo 17 mail-sending method
+            # This will correctly render the QWeb template (which we fixed).
+            template.send_mail(self.id, force_send=True)
+            
+            _logger.info(f"Visitor pass email sent successfully to {self.visitor_email} for pass {self.id}.")
+        
+        except Exception as e:
+            # Catch rendering or SMTP errors
+            _logger.error(f"Failed during standard mail send for pass {self.id}: {e}", exc_info=True)
+            # Re-raise a user-friendly error
+            raise UserError(_("Failed to send email. Please check the template or server logs.\n\nError: %s") % e)
 
     def _notify_employee_of_arrival(self):
         """
@@ -185,7 +209,6 @@ class VisitorPass(models.Model):
         """
         self.ensure_one()
         if self.host_employee_id and self.host_employee_id.user_id:
-            # Post message to visitor pass record (and notify employee)
             message_body = f"""
                 Your visitor, <b>{self.visitor_name}</b>, has arrived and is waiting for you at reception.
                 <br/><br/>
@@ -205,7 +228,6 @@ class VisitorPass(models.Model):
                 partner_ids=[self.host_employee_id.user_id.partner_id.id]
             )
             
-            # Create a concise Activity
             note = f"{self.visitor_name} is waiting for you at reception."
             self.env['mail.activity'].create({
                 'res_id': self.id,
@@ -217,7 +239,6 @@ class VisitorPass(models.Model):
                 'date_deadline': fields.Date.today(),
             })
 
-    # --- NEW METHOD ---
     def _notify_employee_of_confirmation(self):
         """
         Posts a message to the host's chatter with the QR code
@@ -225,15 +246,14 @@ class VisitorPass(models.Model):
         """
         self.ensure_one()
         if self.host_employee_id and self.host_employee_id.user_id:
-            # 1. Create an attachment from the qr_code field
+            # For chatter, creating a standard attachment is more reliable.
             attachment = self.env['ir.attachment'].create({
                 'name': f'Visitor_Pass_QR_{self.visitor_name}.png',
-                'datas': self.qr_code, # self.qr_code is already base64
+                'datas': self.qr_code, 
                 'res_model': self._name,
                 'res_id': self.id,
             })
             
-            # 2. Post a message to the host's chatter
             message_body = f"""
                 <p>The visitor pass for <b>{self.visitor_name}</b> has been confirmed.</p>
                 <p>The visitor has been emailed their QR code. A copy is attached for your reference.</p>
@@ -244,7 +264,7 @@ class VisitorPass(models.Model):
                 message_type='notification',
                 subtype_xmlid='mail.mt_note',
                 partner_ids=[self.host_employee_id.user_id.partner_id.id],
-                attachment_ids=[attachment.id] # Attach the QR code
+                attachment_ids=[attachment.id] 
             )
 
     # --- ACTION BUTTONS ---
@@ -255,9 +275,21 @@ class VisitorPass(models.Model):
         Triggers QR code generation, email, and internal notification.
         """
         self.ensure_one()
+        
+        if not self.visitor_email:
+            raise UserError(_("You must provide a 'Visitor Email' to send the QR code."))
+            
         self.write({'state': 'confirmed'})
-        self._send_qr_email()
-        self._notify_employee_of_confirmation() # <-- MODIFIED: Added this line
+        
+        try:
+            self._send_qr_email() # <-- Sends email to visitor
+        except Exception as e:
+            # Log the error and also inform the user
+            _logger.error(f"Failed to send visitor pass email for {self.id}: {e}", exc_info=True)
+            # The UserError from _send_qr_email will be propagated
+            raise e
+            
+        self._notify_employee_of_confirmation() # <-- Posts to employee chatter
         return True
 
     def action_check_in(self):
@@ -274,44 +306,19 @@ class VisitorPass(models.Model):
         })
         self._notify_employee_of_arrival()
         return True
-
-    def action_start_meeting(self):
-        """
-        Called by Employee to signal the meeting has started.
-        """
-        self.ensure_one()
-        self.write({
-            'state': 'in_meeting',
-            'meeting_start_time': fields.Datetime.now()
-        })
-        return True
-
-    def action_end_meeting(self):
-        """
-        Called by Employee to signal the meeting has ended.
-        """
-        self.ensure_one()
-        self.write({
-            'state': 'meeting_ended',
-            'meeting_end_time': fields.Datetime.now()
-        })
-        return True
         
     def action_check_out(self):
         """
-        Called by Security/Kiosk to check out the visitor.
+Called by Security/KKiosk to check out the visitor.
         """
         self.ensure_one()
-        if self.state not in ('checked_in', 'in_meeting', 'meeting_ended'):
+        if self.state not in ('checked_in'):
             raise UserError(_("This visitor pass cannot be checked out. It is not currently checked in."))
             
         self.write({
             'state': 'checked_out',
             'check_out_time': fields.Datetime.now()
         })
-        # If meeting wasn't manually ended, end it now.
-        if not self.meeting_end_time:
-             self.meeting_end_time = fields.Datetime.now()
         return True
 
     def action_cancel(self):

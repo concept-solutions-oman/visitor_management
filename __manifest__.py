@@ -28,7 +28,7 @@ New Visitor Pass Workflow with Hybrid Kiosk:
         'data/visitor_pass_mail_template.xml',
         'views/visitor_pass_views.xml',
         'views/kiosk_templates.xml',
-        'views/menu_views.xml',  # Correct file path
+        'views/menu_views.xml',
     ],
     'external_dependencies': {
         'python': ['qrcode'],
