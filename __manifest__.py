@@ -37,4 +37,6 @@ New Visitor Pass Workflow with Hybrid Kiosk:
     'application': True,
     'auto_install': False,
     'license': 'LGPL-3',
+    'price': 50.00,
+    'currency': 'USD',
 }

@@ -32,35 +32,38 @@
                             type="object" 
                             class="btn-primary"
                             invisible="state != 'draft'"
-                            groups="visitor_management.group_visitor_employee"/>
+                            groups="visitor_management.group_visitor_employee,visitor_management.group_visitor_security_team,visitor_management.group_visitor_manager"/>
                     
                     <button name="action_check_in" 
                             string="Check-In" 
                             type="object" 
                             class="btn-primary"
                             invisible="state != 'confirmed'"
-                            groups="visitor_management.group_visitor_security"/>
+                            groups="visitor_management.group_visitor_security,visitor_management.group_visitor_security_team"/>
                     <button name="action_check_out" 
                             string="Check-Out" 
                             type="object" 
                             class="btn-primary"
                             invisible="state not in ('checked_in')"
-                            groups="visitor_management.group_visitor_security"/>
+                            groups="visitor_management.group_visitor_security,visitor_management.group_visitor_security_team"/>
                     
                     <button name="action_cancel" 
                             string="Cancel" 
                             type="object"
                             invisible="state in ('checked_out', 'cancelled')"
-                            groups="visitor_management.group_visitor_employee"/>
+                            groups="visitor_management.group_visitor_employee,visitor_management.group_visitor_security_team,visitor_management.group_visitor_manager"/>
                     <button name="action_reset_to_draft" 
                             string="Reset to Draft" 
                             type="object"
                             invisible="state not in ('cancelled')"
-                            groups="visitor_management.group_visitor_employee"/>
+                            groups="visitor_management.group_visitor_employee,visitor_management.group_visitor_security_team,visitor_management.group_visitor_manager"/>
 
                     <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,checked_in,checked_out"/>
                 </header>
                 <sheet>
+                    <field name="check_in_by" invisible="1"/>
+                    <field name="check_out_by" invisible="1"/>
+                    
                     <group>
                         <group id="host_details" string="Host Details">
                             <field name="host_employee_id"/>
@@ -78,9 +81,24 @@
                             <field name="visitor_company"/>
                         </group>
                         <group id="visit_times" string="Visit Timestamps" invisible="state == 'draft'">
-                            <field name="check_in_time" readonly="1"/>
-                            <field name="check_out_time" readonly="1"/>
-                            </group>
+                            <field name="check_in_time" 
+                                   readonly="1" 
+                                   string="Actual Check-In Time"
+                                   invisible="check_in_by == 'security'"/>
+                            <field name="check_in_time" 
+                                   readonly="1" 
+                                   string="Actual Check-In Time (Security)"
+                                   invisible="check_in_by != 'security'"/>
+                                   
+                            <field name="check_out_time" 
+                                   readonly="1" 
+                                   string="Actual Check-Out Time"
+                                   invisible="check_out_by == 'security'"/>
+                            <field name="check_out_time" 
+                                   readonly="1" 
+                                   string="Actual Check-Out Time (Security)"
+                                   invisible="check_out_by != 'security'"/>
+                        </group>
                         <group id="qr_code" string="Access QR Code" invisible="state == 'draft'">
                             <field name="qr_code" widget="image" nolabel="1"/>
                             <field name="access_token" readonly="1"/>

@@ -9,7 +9,7 @@
     <menuitem id="menu_visitor_management_root"
               name="Visitors"
               sequence="50"
-              groups="group_visitor_security,group_visitor_employee,group_visitor_manager"
+              groups="group_visitor_security,group_visitor_employee,group_visitor_manager,group_visitor_security_team"
               web_icon="visitor_management,static/description/icon.png"/>
 
     <menuitem id="menu_visitor_pass_records"
@@ -17,14 +17,14 @@
               action="action_visitor_pass"
               parent="menu_visitor_management_root"
               sequence="1"
-              groups="group_visitor_employee,group_visitor_manager,group_visitor_security"/>
+              groups="group_visitor_employee,group_visitor_manager,group_visitor_security,group_visitor_security_team"/>
 
     <menuitem id="menu_visitor_kiosk"
               name="Kiosk Mode"
               action="action_visitor_kiosk_launch"
               parent="menu_visitor_management_root"
               sequence="10"
-              groups="group_visitor_security,group_visitor_employee,group_visitor_manager"/>
+              groups="group_visitor_security,group_visitor_employee,group_visitor_manager,group_visitor_security_team"/>
 
     <menuitem id="menu_visitor_configuration"
               name="Configuration"

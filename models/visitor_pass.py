@@ -1,12 +1,20 @@
 import uuid
 import qrcode
 import base64
+import requests  # Added for Shelly API
+from requests.auth import HTTPBasicAuth  # Added for Shelly API
 from io import BytesIO
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+from markupsafe import Markup
 import logging
 
 _logger = logging.getLogger(__name__)
+
+# --- SHELLY CONFIGURATION ---
+SHELLY_HOST = "https://key.akhlaghi-network.om/"
+SHELLY_USER = "admin"
+SHELLY_PASS = "admin"
 
 class VisitorPass(models.Model):
     _name = 'visitor.pass'
@@ -51,6 +59,16 @@ class VisitorPass(models.Model):
     check_in_time = fields.Datetime(string='Actual Check-In Time', tracking=True, readonly=True)
     check_out_time = fields.Datetime(string='Actual Check-Out Time', tracking=True, readonly=True)
     
+    # Check-in/out method tracking
+    check_in_by = fields.Selection([
+        ('qr', 'QR Scan'), 
+        ('security', 'Security Team')
+    ], string='Check-In Method', readonly=True, copy=False)
+    check_out_by = fields.Selection([
+        ('qr', 'QR Scan'), 
+        ('security', 'Security Team')
+    ], string='Check-Out Method', readonly=True, copy=False)
+    
     state = fields.Selection([
         ('draft', 'Draft'),
         ('confirmed', 'Confirmed (Awaiting Visitor)'),
@@ -83,7 +101,6 @@ class VisitorPass(models.Model):
             else:
                 rec.name = "New Visit"
 
-
     @api.onchange('visitor_id')
     def _onchange_visitor_id(self):
         """
@@ -100,7 +117,6 @@ class VisitorPass(models.Model):
         """
         On creation, if no visitor_id is provided, create a new res.partner
         (contact) for the visitor.
-        This now also handles email and company from the walk-in form.
         """
         for vals in vals_list:
             if not vals.get('visitor_id') and vals.get('visitor_name') and vals.get('visitor_phone'):
@@ -156,11 +172,9 @@ class VisitorPass(models.Model):
     def _compute_qr_code(self):
         """
         Generate a QR code containing ONLY the access token.
-        The kiosk scanner will construct the full URL.
         """
         for rec in self:
             if rec.access_token:
-                # --- FIX: Only encode the token, not the full URL ---
                 qr = qrcode.QRCode(
                     version=1,
                     error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -179,9 +193,6 @@ class VisitorPass(models.Model):
     def _send_qr_email(self):
         """
         Sends the confirmation and QR code email to the visitor.
-        
-        This method now uses the standard Odoo 17 send_mail,
-        which correctly handles the QWeb template.
         """
         self.ensure_one()
         
@@ -191,16 +202,11 @@ class VisitorPass(models.Model):
             raise UserError(_("The mail template for the visitor pass is missing. Please contact your administrator."))
 
         try:
-            # Use the standard Odoo 17 mail-sending method
-            # This will correctly render the QWeb template (which we fixed).
             template.send_mail(self.id, force_send=True)
-            
             _logger.info(f"Visitor pass email sent successfully to {self.visitor_email} for pass {self.id}.")
         
         except Exception as e:
-            # Catch rendering or SMTP errors
             _logger.error(f"Failed during standard mail send for pass {self.id}: {e}", exc_info=True)
-            # Re-raise a user-friendly error
             raise UserError(_("Failed to send email. Please check the template or server logs.\n\nError: %s") % e)
 
     def _notify_employee_of_arrival(self):
@@ -209,17 +215,24 @@ class VisitorPass(models.Model):
         """
         self.ensure_one()
         if self.host_employee_id and self.host_employee_id.user_id:
-            message_body = f"""
-                Your visitor, <b>{self.visitor_name}</b>, has arrived and is waiting for you at reception.
+            message_body = Markup("""
+                Your visitor, <b>%s</b>, has arrived and is waiting for you at reception.
                 <br/><br/>
                 <b>Visit Details:</b>
                 <ul>
-                    <li><b>Visitor:</b> {self.visitor_name}</li>
-                    <li><b>Phone:</b> {self.visitor_phone}</li>
-                    <li><b>Company:</b> {self.visitor_company or 'N/A'}</li>
-                    <li><b>Reason:</b> {self.reason_for_visit or 'N/A'}</li>
+                    <li><b>Visitor:</b> %s</li>
+                    <li><b>Phone:</b> %s</li>
+                    <li><b>Company:</b> %s</li>
+                    <li><b>Reason:</b> %s</li>
                 </ul>
-            """
+            """) % (
+                self.visitor_name,
+                self.visitor_name,
+                self.visitor_phone,
+                self.visitor_company or 'N/A',
+                self.reason_for_visit or 'N/A'
+            )
+            
             self.message_post(
                 body=message_body,
                 subject=f'Visitor Arrival: {self.visitor_name}',
@@ -246,7 +259,6 @@ class VisitorPass(models.Model):
         """
         self.ensure_one()
         if self.host_employee_id and self.host_employee_id.user_id:
-            # For chatter, creating a standard attachment is more reliable.
             attachment = self.env['ir.attachment'].create({
                 'name': f'Visitor_Pass_QR_{self.visitor_name}.png',
                 'datas': self.qr_code, 
@@ -254,10 +266,11 @@ class VisitorPass(models.Model):
                 'res_id': self.id,
             })
             
-            message_body = f"""
-                <p>The visitor pass for <b>{self.visitor_name}</b> has been confirmed.</p>
+            message_body = Markup("""
+                <p>The visitor pass for <b>%s</b> has been confirmed.</p>
                 <p>The visitor has been emailed their QR code. A copy is attached for your reference.</p>
-            """
+            """) % self.visitor_name
+
             self.message_post(
                 body=message_body,
                 subject=f'Visitor Pass Confirmed: {self.visitor_name}',
@@ -267,12 +280,46 @@ class VisitorPass(models.Model):
                 attachment_ids=[attachment.id] 
             )
 
+    # --- DOOR OPENING LOGIC ---
+
+    def _trigger_door_unlock(self):
+        """
+        Triggers the Shelly relay to open the door.
+        Sends a request to turn the relay OFF.
+        Can be called from Kiosk or Backend.
+        """
+        try:
+            # Handle URL formatting
+            base_url = SHELLY_HOST.rstrip('/')
+            if base_url.startswith("http"):
+                target_url = f"{base_url}/relay/0?turn=off"
+            else:
+                target_url = f"http://{base_url}/relay/0?turn=off"
+
+            _logger.info(f"Opening Door via Shelly API: {target_url}")
+            
+            response = requests.get(
+                target_url,
+                auth=HTTPBasicAuth(SHELLY_USER, SHELLY_PASS),
+                timeout=5
+            )
+            
+            if response.status_code == 200:
+                _logger.info(f"Door Open Signal Success: {response.text}")
+                return True
+            else:
+                _logger.warning(f"Door Open Signal Failed: HTTP {response.status_code} - {response.text}")
+                return False
+                
+        except Exception as e:
+            _logger.error(f"Door Open Exception: {e}")
+            return False
+
     # --- ACTION BUTTONS ---
 
     def action_confirm(self):
         """
         Employee confirms the visit.
-        Triggers QR code generation, email, and internal notification.
         """
         self.ensure_one()
         
@@ -282,19 +329,20 @@ class VisitorPass(models.Model):
         self.write({'state': 'confirmed'})
         
         try:
-            self._send_qr_email() # <-- Sends email to visitor
+            self._send_qr_email() 
         except Exception as e:
-            # Log the error and also inform the user
             _logger.error(f"Failed to send visitor pass email for {self.id}: {e}", exc_info=True)
-            # The UserError from _send_qr_email will be propagated
             raise e
             
-        self._notify_employee_of_confirmation() # <-- Posts to employee chatter
+        self._notify_employee_of_confirmation()
         return True
 
-    def action_check_in(self):
+    # --- CHECK-IN / CHECK-OUT METHODS ---
+    
+    def _do_check_in(self, by='qr'):
         """
-        Called by Security/Kiosk to check in the visitor.
+        Internal check-in logic.
+        Triggers Door Open logic.
         """
         self.ensure_one()
         if self.state not in ('confirmed', 'cancelled'):
@@ -302,14 +350,20 @@ class VisitorPass(models.Model):
             
         self.write({
             'state': 'checked_in',
-            'check_in_time': fields.Datetime.now()
+            'check_in_time': fields.Datetime.now(),
+            'check_in_by': by
         })
         self._notify_employee_of_arrival()
-        return True
         
-    def action_check_out(self):
+        # Open the door
+        self._trigger_door_unlock()
+        
+        return True
+
+    def _do_check_out(self, by='qr'):
         """
-Called by Security/KKiosk to check out the visitor.
+        Internal check-out logic.
+        Triggers Door Open logic.
         """
         self.ensure_one()
         if self.state not in ('checked_in'):
@@ -317,14 +371,32 @@ Called by Security/KKiosk to check out the visitor.
             
         self.write({
             'state': 'checked_out',
-            'check_out_time': fields.Datetime.now()
+            'check_out_time': fields.Datetime.now(),
+            'check_out_by': by
         })
+        
+        # Open the door
+        self._trigger_door_unlock()
+        
         return True
+    
+
+    def action_check_in(self):
+        """Called by Security/Kiosk BUTTON."""
+        return self._do_check_in(by='security')
+        
+    def action_check_out(self):
+        """Called by Security/Kiosk BUTTON."""
+        return self._do_check_out(by='security')
 
     def action_cancel(self):
         self.write({'state': 'cancelled'})
         return True
         
     def action_reset_to_draft(self):
-        self.write({'state': 'draft'})
+        self.write({
+            'state': 'draft',
+            'check_in_by': False,
+            'check_out_by': False
+        })
         return True

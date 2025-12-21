@@ -64,13 +64,15 @@ class VisitorKioskController(http.Controller):
             success = False
 
             if visitor_pass.state == 'confirmed':
-                visitor_pass.action_check_in()
+                # Calls model _do_check_in, which now triggers the door
+                visitor_pass._do_check_in(by='qr') 
                 message_title = f"Welcome, {visitor_pass.visitor_name}!"
                 message_body = f"You are now checked in. {visitor_pass.host_employee_id.name} has been notified of your arrival."
                 success = True
                 
             elif visitor_pass.state == 'checked_in':
-                 visitor_pass.action_check_out()
+                 # Calls model _do_check_out, which now triggers the door
+                 visitor_pass._do_check_out(by='qr')
                  message_title = f"Goodbye, {visitor_pass.visitor_name}!"
                  message_body = "You have been successfully checked out."
                  success = True
@@ -109,13 +111,12 @@ class VisitorKioskController(http.Controller):
                 'message_body': f"An error occurred while processing your request: {e}",
             })
 
-    # --- UPDATED ROUTE FOR AJAX VISITOR CHECK ---
+    # --- AJAX VISITOR CHECK ---
     
     @http.route('/visitor/walkin/check', type='http', auth='public', methods=['POST'], website=True, csrf=False)
     def kiosk_check_visitor(self, **kwargs):
         """
         AJAX endpoint for the walk-in form to check if a visitor exists.
-        Expects JSON body: {'name': '...', 'phone': '...'}
         """
         try:
             data = json.loads(request.httprequest.data)
@@ -126,7 +127,7 @@ class VisitorKioskController(http.Controller):
                 return request.make_json_response({'error': 'Full name and phone number are required.'})
             
             visitor = request.env['res.partner'].sudo().search([
-                ('name', 'ilike', name), # Case-insensitive name check
+                ('name', 'ilike', name),
                 ('phone', '=', phone)
             ], limit=1)
             
@@ -149,16 +150,14 @@ class VisitorKioskController(http.Controller):
             _logger.error("Failed to check visitor by name/phone: %s", e, exc_info=True)
             return request.make_json_response({'error': 'An Odoo server error occurred. Please try again.'}, status=500)
 
-    # --- UPDATED ROUTES FOR WALK-IN VISITORS ---
+    # --- ROUTES FOR WALK-IN VISITORS ---
 
     @http.route('/visitor/walkin', type='http', auth='public', website=True)
     def kiosk_walkin_form(self, **kwargs):
         """
         Displays the walk-in registration form (now multi-step).
-        Fetches employees to populate the "visiting whom" list.
         """
         try:
-            # --- FIX: Re-added the domain filter to only show employees with a user account ---
             employees = request.env['hr.employee'].sudo().search([
                 ('user_id', '!=', False)
             ])
@@ -176,13 +175,11 @@ class VisitorKioskController(http.Controller):
     def kiosk_walkin_submit(self, **kwargs):
         """
         Handles the submission of the multi-step walk-in form.
-        Creates a new visitor.pass (and res.partner if needed)
-        and checks it in immediately.
+        Creates a new visitor.pass and triggers the door.
         """
         required_fields = ['visitor_name', 'visitor_phone', 'employee_id']
         
         if not all(kwargs.get(f) for f in required_fields):
-            # --- FIX: Must re-fetch employees with the filter on error ---
             employees = request.env['hr.employee'].sudo().search([
                 ('user_id', '!=', False)
             ])
@@ -204,10 +201,16 @@ class VisitorKioskController(http.Controller):
                 'planned_check_in': fields.Datetime.now(),
                 'check_in_time': fields.Datetime.now(),
                 'state': 'checked_in', 
+                'check_in_by': 'qr',
                 'reason_for_visit': kwargs.get('reason_for_visit', 'Walk-In Registration'),
             })
             
             new_pass._notify_employee_of_arrival()
+            
+            # --- OPEN DOOR (Walk-in specific trigger) ---
+            # We call this explicitly because we created it in 'checked_in' state
+            # without calling _do_check_in()
+            new_pass._trigger_door_unlock()
             
             request.env.cr.commit()
 

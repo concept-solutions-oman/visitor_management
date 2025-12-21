@@ -1,0 +1,9 @@
+.o_form_view .o_form_sheet_bg {
+    position: relative;
+    -webkit-box-flex: 1;
+    -webkit-flex: 1 0 auto;
+    flex: 1 0 auto;
+    background-color: #007fff;
+    border-bottom: 1px solid #dee2e6;
+}
+.o_form_view label.o_form_label[for^="amc_line_ids"] { display: none !important; }

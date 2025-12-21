@@ -10,9 +10,8 @@
                 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
                 <title>Visitor Kiosk</title>
                 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
-                <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+                <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
                 <style type="text/css"><![CDATA[
-                    /* ... (All your existing CSS styles remain unchanged) ... */
                     :root {
                         --primary-color: #00a09d;
                         --secondary-color: #2c3e50;
@@ -246,6 +245,8 @@
                     .text-center {
                         text-align: center;
                     }
+                    
+                    /* UPDATED: Changed background to gray instead of black to make errors visible */
                     #qr-reader-container {
                         width: 100%;
                         max-width: 400px; 
@@ -253,10 +254,27 @@
                         border-radius: 12px;
                         overflow: hidden;
                         border: 4px solid var(--border-color);
+                        background: #333; /* Slightly lighter than black */
+                        min-height: 300px;
+                        position: relative;
                     }
                     #qr-reader {
                         width: 100%;
+                        height: 100%;
+                        min-height: 300px;
                     }
+                    /* Added helper to center error text */
+                    #qr-reader-status {
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        color: white;
+                        text-align: center;
+                        width: 90%;
+                        z-index: 1;
+                    }
+                    
                     .kiosk_divider {
                         display: flex;
                         align-items: center;
@@ -305,7 +323,6 @@
                         // ===== PROFESSIONAL PARTICLE NETWORK BACKGROUND =====
                         const canvas = document.getElementById('particle-canvas');
                         if (canvas) {
-                            // ... (Your full, existing particle code remains unchanged)
                             const ctx = canvas.getContext('2d');
                             let width = window.innerWidth;
                             let height = window.innerHeight;
@@ -422,9 +439,8 @@
                         } // end if(canvas)
                         
                         
-                        // ===== KIOSK SECURITY (Kept) =====
+                        // ===== KIOSK SECURITY =====
                         if (window.location.pathname.includes('/visitor/')) {
-                            // ... (Your full, existing security code remains unchanged)
                             document.addEventListener('contextmenu', function(e) {
                                 e.preventDefault();
                             });
@@ -437,7 +453,7 @@
                             });
                         }
                         
-                        // ===== AUTO-REFRESH ON INACTIVITY (Kept) =====
+                        // ===== AUTO-REFRESH ON INACTIVITY =====
                         let inactivityTimer;
                         const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
                         
@@ -470,6 +486,7 @@
                 <p class="kiosk_subtitle">Please scan your Visitor Pass QR Code</p>
                 
                 <div id="qr-reader-container">
+                    <div id="qr-reader-status">Initializing Camera...</div>
                     <div id="qr-reader"></div>
                 </div>
 
@@ -490,26 +507,31 @@
                     function onScanSuccess(decodedText, decodedResult) {
                         console.log(`Scan result (token): ${decodedText}`);
                         
-                        // --- SECURITY FIX ---
-                        // We now expect only the access_token, not a full URL.
-                        // We build the URL ourselves to ensure it's on this kiosk.
                         const scanUrl = `${window.location.origin}/visitor/scan/${decodedText}`;
                         
                         html5Qrcode.stop().then(ignore => {
                             document.getElementById('qr-reader').innerHTML = 
                                 '<p style="color: var(--primary-color); padding: 20px; font-size: 18px;">Scan successful! Redirecting...</p>';
-                            window.location.href = scanUrl; // Use the constructed URL
+                            window.location.href = scanUrl; 
                         }).catch(err => {
                             console.error("Failed to stop scanner", err);
-                            window.location.href = scanUrl; // Redirect anyway
+                            window.location.href = scanUrl; 
                         });
                     }
 
                     function onScanFailure(error) {
                         // This will fire continuously, which is normal.
+                        // We do not want to flood the UI with errors.
                     }
                     
+                    const statusDiv = document.getElementById('qr-reader-status');
+
                     try {
+                        // CHECK IF LIBRARY LOADED
+                        if (typeof Html5Qrcode === 'undefined') {
+                            throw new Error("QR Library not loaded. Check internet connection.");
+                        }
+
                         var html5Qrcode = new Html5Qrcode("qr-reader");
                         const qrboxFunction = (viewfinderWidth, viewfinderHeight) => {
                             let minEdgePercentage = 0.7; // 70%
@@ -520,28 +542,46 @@
                                 height: qrboxSize
                             };
                         }
+                        
                         const config = { 
                             fps: 15,
                             qrbox: qrboxFunction,
+                            aspectRatio: 1.0,
                             videoConstraints: {
                                focusMode: "continuous"
                             }
                         };
                         
-                        html5Qrcode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
-                            .catch(err => {
-                                console.warn("Environment camera failed, trying user camera.", err);
-                                html5Qrcode.start({ facingMode: "user" }, config, onScanSuccess, onScanFailure)
-                                    .catch(err2 => {
-                                        console.error("Failed to start any camera.", err2);
-                                        document.getElementById('qr-reader').innerHTML = 
-                                            '<p style="color: red; padding: 20px;">Could not start camera. Please ensure permissions are granted.</p>';
-                                    });
-                            });
+                        if(document.getElementById('qr-reader')) {
+                             html5Qrcode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+                                .then(() => {
+                                    // SUCCESS: Hide the status text
+                                    if(statusDiv) statusDiv.style.display = 'none';
+                                })
+                                .catch(err => {
+                                    console.warn("Environment camera failed, trying user camera.", err);
+                                    html5Qrcode.start({ facingMode: "user" }, config, onScanSuccess, onScanFailure)
+                                        .then(() => {
+                                            if(statusDiv) statusDiv.style.display = 'none';
+                                        })
+                                        .catch(err2 => {
+                                            console.error("Failed to start any camera.", err2);
+                                            if(statusDiv) {
+                                                statusDiv.innerHTML = 
+                                                '<span style="color: #ff6b6b; font-weight: bold;">Camera Error</span><br/>' + 
+                                                '<span style="font-size: 14px;">Please allow camera permissions and refresh.</span><br/>' +
+                                                '<span style="font-size: 12px; opacity: 0.8;">(' + err2 + ')</span>';
+                                            }
+                                        });
+                                });
+                        }
                     } catch (ex) {
                         console.error("Error initializing QR Scanner", ex);
-                         document.getElementById('qr-reader').innerHTML = 
-                            '<p style="color: red; padding: 20px;">Error initializing scanner. Please refresh.</p>';
+                        if(statusDiv) {
+                            statusDiv.innerHTML = 
+                            '<span style="color: #ff6b6b; font-weight: bold;">System Error</span><br/>' + 
+                            '<span style="font-size: 14px;">' + ex.message + '</span>';
+                        }
                     }
                 });
             ]]>

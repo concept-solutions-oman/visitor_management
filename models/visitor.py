@@ -1,4 +1,5 @@
 from odoo import models, fields, api, _
+from markupsafe import Markup # Imported Markup for safe HTML formatting
 
 class Visitor(models.Model):
     _name = 'visitor.visitor'
@@ -25,7 +26,7 @@ class Visitor(models.Model):
         required=True,
         tracking=True,
         ondelete='restrict',
-        default=_get_default_employee_id  # Added this default
+        default=_get_default_employee_id
     )
     check_in_time = fields.Datetime(
         string='Check-In Time',
@@ -57,7 +58,7 @@ class Visitor(models.Model):
     def _notify_employee(self):
         """
         Posts a message to the employee's chatter feed and creates an activity.
-        Updated for better HTML formatting.
+        Updated using Markup for proper HTML rendering in Odoo 17.
         """
         self.ensure_one()
         if self.employee_id and self.employee_id.user_id:
@@ -65,20 +66,26 @@ class Visitor(models.Model):
             # Format Check-In Time
             check_in_time_str = self.check_in_time.strftime('%Y-%m-%d %H:%M:%S')
             
-            # Build HTML message body for chatter
-            company_html = f"Company: {self.company}" if self.company else " Company: N/A"
-            reason_html = f"Reason: {self.reason_for_visit}" if self.reason_for_visit else "Reason: N/A"
-            
-            message_body = f"""
-                New Visitor Check-In :   
-                  Please welcome your visitor at the reception:
-                    Visitor: {self.name} , 
-                    Phone: {self.phone} , 
-                    {company_html} ,
-                    {reason_html} , 
-                    Check-In Time: {check_in_time_str} , 
-
-                  """
+            # Build HTML message body using Markup
+            # We use %s placeholders inside Markup to safely insert variable content
+            message_body = Markup("""
+                <b>New Visitor Check-In:</b><br/>
+                Please welcome your visitor at the reception.<br/><br/>
+                <b>Visitor Details:</b>
+                <ul>
+                    <li><b>Visitor:</b> %s</li>
+                    <li><b>Phone:</b> %s</li>
+                    <li><b>Company:</b> %s</li>
+                    <li><b>Reason:</b> %s</li>
+                    <li><b>Check-In Time:</b> %s</li>
+                </ul>
+            """) % (
+                self.name,
+                self.phone,
+                self.company or 'N/A',
+                self.reason_for_visit or 'N/A',
+                check_in_time_str
+            )
             
             # Post message to visitor record
             self.message_post(
