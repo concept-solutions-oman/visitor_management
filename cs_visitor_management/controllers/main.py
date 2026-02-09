@@ -30,7 +30,7 @@ class VisitorKioskController(http.Controller):
         kiosk_token = str(uuid.uuid4())
         request.session['kiosk_token'] = kiosk_token
         
-        return request.render('visitor_management.kiosk_hybrid_welcome_screen', {
+        return request.render('cs_visitor_management.kiosk_hybrid_welcome_screen', {
             'company': request.env.company,
         })
 
@@ -41,7 +41,7 @@ class VisitorKioskController(http.Controller):
         """
         
         if not request.session.get('kiosk_token'):
-            return request.render('visitor_management.kiosk_scan_result', {
+            return request.render('cs_visitor_management.kiosk_scan_result', {
                 'company': request.env.company,
                 'success': False,
                 'message_title': 'Scan Error',
@@ -51,7 +51,7 @@ class VisitorKioskController(http.Controller):
         visitor_pass, error = self._get_visitor_pass(access_token)
         
         if error:
-            return request.render('visitor_management.kiosk_scan_result', {
+            return request.render('cs_visitor_management.kiosk_scan_result', {
                 'company': request.env.company,
                 'success': False,
                 'message_title': 'Scan Error',
@@ -92,7 +92,7 @@ class VisitorKioskController(http.Controller):
             if success:
                 request.env.cr.commit()
 
-            return request.render('visitor_management.kiosk_scan_result', {
+            return request.render('cs_visitor_management.kiosk_scan_result', {
                 'company': request.env.company,
                 'success': success,
                 'message_title': message_title,
@@ -104,7 +104,7 @@ class VisitorKioskController(http.Controller):
         except Exception as e:
             request.env.cr.rollback() 
             _logger.exception("Error during visitor scan processing: %s", e)
-            return request.render('visitor_management.kiosk_scan_result', {
+            return request.render('cs_visitor_management.kiosk_scan_result', {
                 'company': request.env.company,
                 'success': False,
                 'message_title': 'System Error',
@@ -165,7 +165,7 @@ class VisitorKioskController(http.Controller):
             _logger.error("Failed to fetch employee list for kiosk: %s", e)
             employees = request.env['hr.employee'].sudo() 
 
-        return request.render('visitor_management.kiosk_walkin_form_screen', {
+        return request.render('cs_visitor_management.kiosk_walkin_form_screen', {
             'company': request.env.company,
             'employees': employees,
             'error_message': kwargs.get('error_message')
@@ -183,7 +183,7 @@ class VisitorKioskController(http.Controller):
             employees = request.env['hr.employee'].sudo().search([
                 ('user_id', '!=', False)
             ])
-            return request.render('visitor_management.kiosk_walkin_form_screen', {
+            return request.render('cs_visitor_management.kiosk_walkin_form_screen', {
                 'company': request.env.company,
                 'employees': employees,
                 'error_message': "Please fill in your name, phone, and select an employee."
@@ -214,7 +214,7 @@ class VisitorKioskController(http.Controller):
             
             request.env.cr.commit()
 
-            return request.render('visitor_management.kiosk_scan_result', {
+            return request.render('cs_visitor_management.kiosk_scan_result', {
                 'company': request.env.company,
                 'success': True,
                 'message_title': f"Thank You, {new_pass.visitor_name}!",
@@ -226,7 +226,7 @@ class VisitorKioskController(http.Controller):
         except Exception as e:
             request.env.cr.rollback()
             _logger.exception("Error during walk-in submission: %s", e)
-            return request.render('visitor_management.kiosk_scan_result', {
+            return request.render('cs_visitor_management.kiosk_scan_result', {
                 'company': request.env.company,
                 'success': False,
                 'message_title': 'System Error',

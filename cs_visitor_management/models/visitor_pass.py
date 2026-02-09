@@ -196,9 +196,9 @@ class VisitorPass(models.Model):
         """
         self.ensure_one()
         
-        template = self.env.ref('visitor_management.mail_template_visitor_pass_confirmation', raise_if_not_found=False)
+        template = self.env.ref('cs_visitor_management.mail_template_visitor_pass_confirmation', raise_if_not_found=False)
         if not template:
-            _logger.error("Mail template 'visitor_management.mail_template_visitor_pass_confirmation' not found.")
+            _logger.error("Mail template 'cs_visitor_management.mail_template_visitor_pass_confirmation' not found.")
             raise UserError(_("The mail template for the visitor pass is missing. Please contact your administrator."))
 
         try:

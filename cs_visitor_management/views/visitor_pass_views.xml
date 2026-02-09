@@ -32,31 +32,31 @@
                             type="object" 
                             class="btn-primary"
                             invisible="state != 'draft'"
-                            groups="visitor_management.group_visitor_employee,visitor_management.group_visitor_security_team,visitor_management.group_visitor_manager"/>
+                            groups="cs_visitor_management.group_visitor_employee,cs_visitor_management.group_visitor_security_team,cs_visitor_management.group_visitor_manager"/>
                     
                     <button name="action_check_in" 
                             string="Check-In" 
                             type="object" 
                             class="btn-primary"
                             invisible="state != 'confirmed'"
-                            groups="visitor_management.group_visitor_security,visitor_management.group_visitor_security_team"/>
+                            groups="cs_visitor_management.group_visitor_security,cs_visitor_management.group_visitor_security_team"/>
                     <button name="action_check_out" 
                             string="Check-Out" 
                             type="object" 
                             class="btn-primary"
                             invisible="state not in ('checked_in')"
-                            groups="visitor_management.group_visitor_security,visitor_management.group_visitor_security_team"/>
+                            groups="cs_visitor_management.group_visitor_security,cs_visitor_management.group_visitor_security_team"/>
                     
                     <button name="action_cancel" 
                             string="Cancel" 
                             type="object"
                             invisible="state in ('checked_out', 'cancelled')"
-                            groups="visitor_management.group_visitor_employee,visitor_management.group_visitor_security_team,visitor_management.group_visitor_manager"/>
+                            groups="cs_visitor_management.group_visitor_employee,cs_visitor_management.group_visitor_security_team,cs_visitor_management.group_visitor_manager"/>
                     <button name="action_reset_to_draft" 
                             string="Reset to Draft" 
                             type="object"
                             invisible="state not in ('cancelled')"
-                            groups="visitor_management.group_visitor_employee,visitor_management.group_visitor_security_team,visitor_management.group_visitor_manager"/>
+                            groups="cs_visitor_management.group_visitor_employee,cs_visitor_management.group_visitor_security_team,cs_visitor_management.group_visitor_manager"/>
 
                     <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,checked_in,checked_out"/>
                 </header>
@@ -132,7 +132,7 @@
                                 ('planned_check_in', '&lt;=', context_today().strftime('%Y-%m-%d 23:59:59'))]"/>
                 <filter string="My Visits" name="my_visits" 
                         domain="[('host_employee_id.user_id', '=', uid)]"
-                        groups="visitor_management.group_visitor_employee"/>
+                        groups="cs_visitor_management.group_visitor_employee"/>
                 <separator/>
                 <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
                 <filter string="Confirmed" name="confirmed" domain="[('state', '=', 'confirmed')]"/>

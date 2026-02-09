@@ -10,7 +10,7 @@
               name="Visitors"
               sequence="50"
               groups="group_visitor_security,group_visitor_employee,group_visitor_manager,group_visitor_security_team"
-              web_icon="visitor_management,static/description/icon.png"/>
+              web_icon="cs_visitor_management,static/description/icon.png"/>
 
     <menuitem id="menu_visitor_pass_records"
               name="Visitor Passes"

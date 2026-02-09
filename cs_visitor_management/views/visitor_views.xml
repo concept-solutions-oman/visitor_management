@@ -46,10 +46,10 @@
                                    required="1"
                                    readonly="1"
                                    force_save="1"
-                                   groups="visitor_management.group_visitor_employee,!visitor_management.group_visitor_manager"/>
+                                   groups="cs_visitor_management.group_visitor_employee,!cs_visitor_management.group_visitor_manager"/>
                             <field name="employee_id"
                                    required="1"
-                                   groups="visitor_management.group_visitor_manager"/>
+                                   groups="cs_visitor_management.group_visitor_manager"/>
                             
                             <field name="reason_for_visit"/>
                         </group>

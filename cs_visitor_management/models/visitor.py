@@ -12,8 +12,8 @@ class Visitor(models.Model):
         Get the default employee_id for the current user.
         Only default if the user is an employee but NOT a manager.
         """
-        if self.env.user.has_group('visitor_management.group_visitor_employee') and \
-           not self.env.user.has_group('visitor_management.group_visitor_manager'):
+        if self.env.user.has_group('cs_visitor_management.group_visitor_employee') and \
+           not self.env.user.has_group('cs_visitor_management.group_visitor_manager'):
             return self.env.user.employee_id
         return False
 
